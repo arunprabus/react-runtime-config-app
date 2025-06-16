@@ -36,8 +36,8 @@ COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Set default environment variables
-ENV API_URL=http://localhost:3000/api
-ENV APP_NAME="React Runtime Config App"
+ENV API_URL=http://localhost:3001/api
+ENV APP_NAME="Health Profile Frontend"
 ENV NODE_ENV=production
 
 # Expose port

@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # Frontend Service
+  frontend:
+    image: ghcr.io/arunprabus/frontend-config-app:latest
+    container_name: health-frontend
+    ports:
+      - "8080:80"
+    environment:
+      - API_URL=http://localhost:3001/api
+      - APP_NAME=Health Profile Management
+      - NODE_ENV=development
+    depends_on:
+      - backend
+    networks:
+      - health-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend API Service
+  backend:
+    image: ghcr.io/arunprabus/health-api:latest
+    container_name: health-api
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - FRONTEND_URL=http://localhost:8080
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - S3_BUCKET=${S3_BUCKET:-health-app-uploads}
+      - DB_URL=${DB_URL:-}
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-key}
+    networks:
+      - health-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Database (MySQL) - For future use
+  database:
+    image: mysql:8.0
+    container_name: health-db
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-rootpassword}
+      - MYSQL_DATABASE=${DB_NAME:-health_app}
+      - MYSQL_USER=${DB_USER:-health_user}
+      - MYSQL_PASSWORD=${DB_PASSWORD:-health_password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - health-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Redis (for caching) - For future use
+  redis:
+    image: redis:7-alpine
+    container_name: health-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - health-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  health-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
