@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: health-app-api
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - FRONTEND_URL=http://localhost:5173
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-health-app-uploads}
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - health-app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend React Service
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: health-app-frontend
+    ports:
+      - "8080:80"
+    environment:
+      - API_URL=http://localhost:3000/api
+      - APP_NAME=Health App - Microservices
+      - NODE_ENV=development
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - health-app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Database (MySQL) - For future use
+  database:
+    image: mysql:8.0
+    container_name: health-app-db
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=health_app
+      - MYSQL_USER=health_user
+      - MYSQL_PASSWORD=health_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - health-app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Redis (for caching) - For future use
+  redis:
+    image: redis:7-alpine
+    container_name: health-app-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - health-app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  health-app-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local

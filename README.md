@@ -1,242 +1,305 @@
-# React SPA with Docker Runtime Configuration
+# Health App - Microservices Architecture
 
-A production-ready React Single Page Application (SPA) demonstrating Docker runtime configuration patterns using environment variables and nginx templating.
-
-## 🚀 Features
-
-- **Runtime Configuration**: Environment variables injected at container startup
-- **Docker Multi-stage Build**: Optimized production builds with nginx
-- **Production Ready**: Security headers, gzip compression, health checks
-- **Client-side Routing**: SPA routing support with nginx fallback
-- **TypeScript**: Full type safety throughout the application
-- **Tailwind CSS**: Modern utility-first CSS framework
-
-## 📋 Prerequisites
-
-- Docker 20.10+
-- Node.js 20.19.1+ (for local development)
-- npm or yarn
+A production-ready health profile management system built with React frontend and Node.js backend, demonstrating modern microservices architecture with Docker containerization.
 
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   React SPA     │    │  nginx Server   │    │   Environment   │
+│   React SPA     │    │  Node.js API    │    │   AWS Services  │
 │                 │    │                 │    │                 │
-│ • Components    │◄──►│ • Static Serve  │◄──►│ • API_URL       │
-│ • Hooks         │    │ • Routing       │    │ • APP_NAME      │
-│ • Config Load   │    │ • Compression   │    │ • NODE_ENV      │
-│ • Responsive UI │    │ • Security      │    │ • Features      │
+│ • Profile Forms │◄──►│ • CRUD APIs     │◄──►│ • S3 Storage    │
+│ • File Upload   │    │ • File Upload   │    │ • RDS MySQL     │
+│ • Runtime Config│    │ • Validation    │    │ • EKS Cluster   │
+│ • Responsive UI │    │ • Health Checks │    │ • Load Balancer │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
+        │                        │                        │
+        └────────────────────────┼────────────────────────┘
+                                 │
+                    ┌─────────────────┐
+                    │  Infrastructure │
+                    │                 │
+                    │ • Docker        │
+                    │ • Kubernetes    │
+                    │ • Terraform     │
+                    │ • GitHub Actions│
+                    └─────────────────┘
 ```
 
-## 🛠️ Local Development
+## 🚀 Features
 
-### Install Dependencies
+### Frontend (React + TypeScript)
+- **Runtime Configuration**: Environment variables injected at container startup
+- **Profile Management**: Create, view, and delete health profiles
+- **File Upload**: PDF document upload with progress tracking
+- **Responsive Design**: Mobile-first design with Tailwind CSS
+- **Real-time Updates**: Dynamic data loading from API
+- **Error Handling**: Comprehensive error handling and user feedback
+
+### Backend (Node.js + Express)
+- **RESTful API**: Clean REST endpoints for profile management
+- **File Upload**: Secure PDF upload to AWS S3
+- **Validation**: Input validation with Joi
+- **Security**: Helmet.js security headers and CORS
+- **Health Checks**: Built-in health monitoring endpoints
+- **Error Handling**: Centralized error handling middleware
+
+### Infrastructure
+- **Docker**: Multi-stage builds for optimized containers
+- **Docker Compose**: Local development orchestration
+- **Database**: MySQL with initialization scripts
+- **Caching**: Redis for future performance optimization
+- **Monitoring**: Health checks and logging
+
+## 📋 Prerequisites
+
+- Docker 20.10+
+- Docker Compose 2.0+
+- Node.js 20.19.1+ (for local development)
+- AWS Account (for S3 uploads in production)
+
+## 🛠️ Quick Start
+
+### 1. Clone and Setup
 ```bash
+git clone <repository-url>
+cd health-app
+cp .env.example .env
+```
+
+### 2. Start with Docker Compose
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Check service status
+docker-compose ps
+```
+
+### 3. Access the Application
+- **Frontend**: http://localhost:8080
+- **Backend API**: http://localhost:3000
+- **API Health**: http://localhost:3000/api/health
+- **Database**: localhost:3306 (MySQL)
+- **Redis**: localhost:6379
+
+### 4. Test the API
+```bash
+# Health check
+curl http://localhost:3000/api/health
+
+# Get all profiles
+curl http://localhost:3000/api/profile
+
+# Create a profile
+curl -X POST http://localhost:3000/api/profile \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "bloodGroup": "O+",
+    "insurance": "Blue Cross",
+    "email": "john@example.com",
+    "idProof": "DL123456789"
+  }'
+```
+
+## 🏗️ Development
+
+### Local Development Setup
+```bash
+# Backend
+cd backend
 npm install
-```
+npm run dev
 
-### Start Development Server
-```bash
+# Frontend (in another terminal)
+npm install
 npm run dev
 ```
 
-### Build for Production
-```bash
-npm run build
-```
-
-### Preview Production Build
-```bash
-npm run preview
-```
-
-## 🐳 Docker Usage
-
-### Build the Docker Image
-```bash
-docker build -t react-runtime-config-app .
-```
-
-### Run with Default Configuration
-```bash
-docker run -p 8080:80 react-runtime-config-app
-```
-
-### Run with Custom Environment Variables
-```bash
-docker run -p 8080:80 \
-  -e API_URL="https://api.example.com" \
-  -e APP_NAME="My Production App" \
-  -e NODE_ENV="production" \
-  react-runtime-config-app
-```
-
-### Debug Container
-```bash
-# Get container ID
-docker ps
-
-# Access container shell
-docker exec -it <container_id> sh
-
-# Check generated config
-cat /usr/share/nginx/html/assets/runtime-config.json
-
-# Check nginx logs
-docker logs <container_id>
-```
-
-## ⚙️ Configuration
-
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `API_URL` | `http://localhost:3000/api` | Backend API endpoint |
-| `APP_NAME` | `React Runtime Config App` | Application display name |
-| `NODE_ENV` | `production` | Environment mode |
-
-### Runtime Configuration Template
-
-The application uses a template-based approach for runtime configuration:
-
-**Template Location**: `src/assets/runtime-config.json.template`
-```json
-{
-  "apiUrl": "${API_URL}",
-  "appName": "${APP_NAME}",
-  "environment": "${NODE_ENV}",
-  "features": {
-    "authentication": true,
-    "fileUpload": true,
-    "notifications": true
-  },
-  "version": "1.0.0",
-  "buildTime": "2024-01-01T00:00:00Z"
-}
+#### Frontend (.env)
+```env
+API_URL=http://localhost:3000/api
+APP_NAME=Health App - Development
+NODE_ENV=development
 ```
 
-**Generated Location**: `/usr/share/nginx/html/assets/runtime-config.json`
+#### Backend (backend/.env)
+```env
+PORT=3000
+NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
+AWS_ACCESS_KEY_ID=your_key
+AWS_SECRET_ACCESS_KEY=your_secret
+S3_BUCKET_NAME=health-app-uploads
+```
 
-## 🏭 Production Deployment
+## 📁 Project Structure
 
-### Docker Compose Example
+```
+health-app/
+├── backend/                    # Node.js API service
+│   ├── src/
+│   │   ├── routes/            # API routes
+│   │   ├── middleware/        # Express middleware
+│   │   ├── data/             # Data storage (temporary)
+│   │   └── server.js         # Main server file
+│   ├── Dockerfile            # Backend container
+│   └── package.json
+├── src/                       # React frontend
+│   ├── components/           # React components
+│   ├── assets/              # Static assets
+│   └── config.ts            # Runtime configuration
+├── database/                 # Database scripts
+│   └── init.sql             # MySQL initialization
+├── docker-compose.yml       # Local development
+├── Dockerfile              # Frontend container
+└── README.md
+```
+
+## 🔌 API Endpoints
+
+### Profile Management
+- `GET /api/profile` - Get all profiles
+- `GET /api/profile/:id` - Get specific profile
+- `POST /api/profile` - Create new profile
+- `PUT /api/profile/:id` - Update profile
+- `DELETE /api/profile/:id` - Delete profile
+
+### File Upload
+- `POST /api/upload` - Upload PDF file to S3
+
+### System
+- `GET /api/health` - Health check endpoint
+- `GET /` - API information
+
+## 🐳 Docker Commands
+
+### Build Images
+```bash
+# Build backend
+docker build -t health-app-backend ./backend
+
+# Build frontend
+docker build -t health-app-frontend .
+```
+
+### Run Individual Services
+```bash
+# Backend only
+docker run -p 3000:3000 \
+  -e NODE_ENV=development \
+  health-app-backend
+
+# Frontend only
+docker run -p 8080:80 \
+  -e API_URL=http://localhost:3000/api \
+  -e APP_NAME="Health App" \
+  health-app-frontend
+```
+
+### Production Deployment
+```bash
+# Production build
+docker-compose -f docker-compose.prod.yml up -d
+
+# Scale services
+docker-compose up -d --scale backend=3
+```
+
+## 🧪 Testing
+
+### Backend Tests
+```bash
+cd backend
+npm test
+```
+
+### Frontend Tests
+```bash
+npm test
+```
+
+### Integration Tests
+```bash
+# Test API endpoints
+curl -X POST http://localhost:3000/api/profile \
+  -H "Content-Type: application/json" \
+  -d @test-data/sample-profile.json
+
+# Test file upload
+curl -X POST http://localhost:3000/api/upload \
+  -F "file=@test-files/sample.pdf"
+```
+
+## 🚀 Production Deployment
+
+### AWS EKS Deployment
+```bash
+# Apply Kubernetes manifests
+kubectl apply -f k8s/
+
+# Check deployment status
+kubectl get pods
+kubectl get services
+```
+
+### Environment Configuration
 ```yaml
-version: '3.8'
-services:
-  frontend:
-    build: .
-    ports:
-      - "80:80"
-    environment:
-      - API_URL=https://api.production.com
-      - APP_NAME=Production App
-      - NODE_ENV=production
-    restart: unless-stopped
+# Production environment variables
+API_URL: https://api.healthapp.com
+APP_NAME: Health App - Production
+NODE_ENV: production
+AWS_REGION: us-east-1
+S3_BUCKET_NAME: healthapp-prod-uploads
 ```
 
-### Kubernetes Deployment Example
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: react-app
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: react-app
-  template:
-    metadata:
-      labels:
-        app: react-app
-    spec:
-      containers:
-      - name: react-app
-        image: react-runtime-config-app:latest
-        ports:
-        - containerPort: 80
-        env:
-        - name: API_URL
-          value: "https://api.k8s.com"
-        - name: APP_NAME
-          value: "Kubernetes App"
-```
-
-## 🔧 Technical Details
-
-### Docker Multi-stage Build
-1. **Build Stage**: Uses Node.js 20.19.1 to build the React application
-2. **Production Stage**: Uses nginx:alpine to serve static files
-
-### nginx Configuration
-- **Static Asset Caching**: 1-year cache for JS/CSS/images
-- **Security Headers**: X-Frame-Options, X-Content-Type-Options, etc.
-- **Gzip Compression**: Enabled for text-based assets
-- **Client-side Routing**: Fallback to index.html for SPA routes
-- **Health Check**: `/health` endpoint for monitoring
-
-### File Structure
-```
-├── Dockerfile              # Multi-stage Docker build
-├── default.conf            # nginx configuration
-├── entrypoint.sh           # Container startup script
-├── src/
-│   ├── components/         # React components
-│   ├── hooks/              # Custom React hooks
-│   ├── assets/             # Static assets and templates
-│   └── ...
-├── dist/                   # Production build output
-└── README.md              # This file
-```
-
-## 🚨 Troubleshooting
-
-### Common Issues
-
-1. **Config Loading Error**: If you see "Unexpected token '<'" error, the app falls back to default configuration
-2. **Port Conflicts**: Change the host port if 8080 is in use: `-p 3000:80`
-3. **Environment Variables**: Ensure variables are properly quoted in shell commands
+## 📊 Monitoring
 
 ### Health Checks
-```bash
-# Check if container is healthy
-curl http://localhost:8080/health
-
-# Check config endpoint
-curl http://localhost:8080/assets/runtime-config.json
-```
+- Frontend: `http://localhost:8080/health`
+- Backend: `http://localhost:3000/api/health`
+- Database: Built-in MySQL health check
 
 ### Logs
 ```bash
-# View container logs
-docker logs <container_id>
+# View all logs
+docker-compose logs
 
-# Follow logs in real-time
-docker logs -f <container_id>
+# Follow specific service
+docker-compose logs -f backend
+
+# View last 100 lines
+docker-compose logs --tail=100 frontend
 ```
 
-## 📦 Dependencies
+## 🔒 Security
 
-### Production Dependencies
-- `react`: ^18.3.1
-- `react-dom`: ^18.3.1
-- `lucide-react`: ^0.344.0
+### Implemented Security Measures
+- **Helmet.js**: Security headers
+- **CORS**: Cross-origin resource sharing
+- **Input Validation**: Joi schema validation
+- **File Upload**: PDF-only restriction
+- **Environment Variables**: Sensitive data protection
 
-### Development Dependencies
-- `vite`: ^5.4.2
-- `typescript`: ^5.5.3
-- `tailwindcss`: ^3.4.1
-- `@vitejs/plugin-react`: ^4.3.1
+### Future Security Enhancements
+- JWT authentication
+- Rate limiting
+- API key management
+- Database encryption
+- Audit logging
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test with Docker
+4. Add tests
 5. Submit a pull request
 
 ## 📄 License
@@ -246,6 +309,6 @@ This project is licensed under the MIT License.
 ## 🔗 Related Resources
 
 - [Docker Best Practices](https://docs.docker.com/develop/dev-best-practices/)
-- [nginx Configuration](https://nginx.org/en/docs/)
+- [Node.js Production Best Practices](https://expressjs.com/en/advanced/best-practice-performance.html)
 - [React Production Build](https://create-react-app.dev/docs/production-build/)
-- [Vite Build Options](https://vitejs.dev/guide/build.html)
+- [AWS S3 Documentation](https://docs.aws.amazon.com/s3/)

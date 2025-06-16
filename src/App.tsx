@@ -1,33 +1,129 @@
 import React, { useEffect, useState } from 'react';
 import { ConfigDisplay } from './components/ConfigDisplay';
+import { ProfileForm } from './components/ProfileForm';
+import { ProfileList } from './components/ProfileList';
 import { loadConfig, AppConfig } from './config';
-import { Rocket, Code, Database, Shield } from 'lucide-react';
+import { Heart, Activity, Users } from 'lucide-react';
+
+interface Profile {
+  id: string;
+  name: string;
+  bloodGroup: string;
+  insurance: string;
+  email: string;
+  idProof: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ProfileFormData {
+  name: string;
+  bloodGroup: string;
+  insurance: string;
+  email: string;
+  idProof: string;
+}
 
 function App() {
   const [config, setConfig] = useState<AppConfig | null>(null);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [formLoading, setFormLoading] = useState(false);
+  const [profilesLoading, setProfilesLoading] = useState(false);
 
   useEffect(() => {
-    const initializeConfig = async () => {
+    const initializeApp = async () => {
       try {
         const loadedConfig = await loadConfig();
         setConfig(loadedConfig);
+        await fetchProfiles(loadedConfig.apiUrl);
       } catch (error) {
-        console.error('Failed to initialize config:', error);
+        console.error('Failed to initialize app:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    initializeConfig();
+    initializeApp();
   }, []);
+
+  const fetchProfiles = async (apiUrl: string) => {
+    setProfilesLoading(true);
+    try {
+      const response = await fetch(`${apiUrl}/profile`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setProfiles(result.data);
+      } else {
+        console.error('Failed to fetch profiles:', result.error);
+      }
+    } catch (error) {
+      console.error('Error fetching profiles:', error);
+    } finally {
+      setProfilesLoading(false);
+    }
+  };
+
+  const handleCreateProfile = async (formData: ProfileFormData) => {
+    if (!config) return;
+
+    setFormLoading(true);
+    try {
+      const response = await fetch(`${config.apiUrl}/profile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setProfiles(prev => [result.data, ...prev]);
+        alert('Profile created successfully!');
+      } else {
+        alert(`Failed to create profile: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error creating profile:', error);
+      alert('Failed to create profile. Please try again.');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleDeleteProfile = async (id: string) => {
+    if (!config) return;
+    
+    if (!confirm('Are you sure you want to delete this profile?')) return;
+
+    try {
+      const response = await fetch(`${config.apiUrl}/profile/${id}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setProfiles(prev => prev.filter(profile => profile.id !== id));
+        alert('Profile deleted successfully!');
+      } else {
+        alert(`Failed to delete profile: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error deleting profile:', error);
+      alert('Failed to delete profile. Please try again.');
+    }
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading configuration...</p>
+          <p className="text-gray-600">Loading Health App...</p>
         </div>
       </div>
     );
@@ -49,11 +145,11 @@ function App() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center items-center space-x-3 mb-4">
-            <Rocket className="h-12 w-12 text-blue-600" />
+            <Heart className="h-12 w-12 text-red-500" />
             <h1 className="text-4xl font-bold text-gray-900">{config.appName}</h1>
           </div>
           <p className="text-xl text-gray-600">
-            Production-ready React SPA with Docker runtime configuration
+            Comprehensive Health Profile Management System
           </p>
           <div className="mt-2">
             <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
@@ -66,99 +162,85 @@ function App() {
           </div>
         </div>
 
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow-md p-6 text-center">
+            <Users className="h-12 w-12 text-blue-500 mx-auto mb-4" />
+            <h3 className="text-2xl font-bold text-gray-800">{profiles.length}</h3>
+            <p className="text-gray-600">Total Profiles</p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6 text-center">
+            <Activity className="h-12 w-12 text-green-500 mx-auto mb-4" />
+            <h3 className="text-2xl font-bold text-gray-800">Active</h3>
+            <p className="text-gray-600">System Status</p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6 text-center">
+            <Heart className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-2xl font-bold text-gray-800">v{config.version}</h3>
+            <p className="text-gray-600">App Version</p>
+          </div>
+        </div>
+
         {/* Configuration Display */}
         <ConfigDisplay config={config} />
 
-        {/* Feature Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow-md p-6 text-center">
-            <Code className="h-12 w-12 text-blue-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Runtime Configuration</h3>
-            <p className="text-gray-600 text-sm">
-              Environment variables injected at container startup using envsubst templating
-            </p>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6 text-center">
-            <Database className="h-12 w-12 text-green-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Docker Ready</h3>
-            <p className="text-gray-600 text-sm">
-              Multi-stage Docker build with nginx serving optimized for production deployment
-            </p>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6 text-center">
-            <Shield className="h-12 w-12 text-purple-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Production Features</h3>
-            <p className="text-gray-600 text-sm">
-              Security headers, gzip compression, client-side routing, and health checks
-            </p>
-          </div>
+        {/* Profile Form */}
+        <div className="mb-8">
+          <ProfileForm onSubmit={handleCreateProfile} loading={formLoading} />
         </div>
 
-        {/* API Configuration */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">🔗 API Configuration</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-600">API Endpoint</label>
-              <p className="text-gray-900 break-all font-mono text-sm bg-gray-50 p-2 rounded">
-                {config.apiUrl}
-              </p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-600">Version</label>
-              <p className="text-gray-900">{config.version}</p>
-            </div>
-          </div>
-        </div>
+        {/* Profile List */}
+        <ProfileList 
+          profiles={profiles} 
+          onDelete={handleDeleteProfile}
+          loading={profilesLoading}
+        />
 
-        {/* Feature Status */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">🚀 Feature Status</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {Object.entries(config.features).map(([feature, enabled]) => (
-              <div key={feature} className="flex items-center space-x-3">
-                <div className={`w-3 h-3 rounded-full ${enabled ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="capitalize font-medium">{feature.replace(/([A-Z])/g, ' $1')}</span>
-                <span className="text-sm text-gray-500">{enabled ? 'Enabled' : 'Disabled'}</span>
+        {/* API Information */}
+        <div className="mt-8 bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">🔗 API Endpoints</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">GET</span>
+                <code className="text-gray-700">/api/profile</code>
               </div>
-            ))}
+              <div className="flex items-center space-x-2">
+                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">POST</span>
+                <code className="text-gray-700">/api/profile</code>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">GET</span>
+                <code className="text-gray-700">/api/profile/:id</code>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">DELETE</span>
+                <code className="text-gray-700">/api/profile/:id</code>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">POST</span>
+                <code className="text-gray-700">/api/upload</code>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">GET</span>
+                <code className="text-gray-700">/api/health</code>
+              </div>
+            </div>
           </div>
-        </div>
-
-        {/* Instructions */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">🚀 Docker Commands</h2>
-          <div className="space-y-4">
-            <div>
-              <h3 className="font-medium text-gray-700 mb-2">Build the image:</h3>
-              <code className="block bg-gray-100 p-3 rounded text-sm font-mono">
-                docker build -t react-runtime-config-app .
-              </code>
-            </div>
-            <div>
-              <h3 className="font-medium text-gray-700 mb-2">Run with custom environment:</h3>
-              <code className="block bg-gray-100 p-3 rounded text-sm font-mono">
-                docker run -p 8080:80 \<br />
-                &nbsp;&nbsp;-e API_URL="https://api.example.com" \<br />
-                &nbsp;&nbsp;-e APP_NAME="My Production App" \<br />
-                &nbsp;&nbsp;-e NODE_ENV="production" \<br />
-                &nbsp;&nbsp;react-runtime-config-app
-              </code>
-            </div>
-            <div>
-              <h3 className="font-medium text-gray-700 mb-2">Verify configuration:</h3>
-              <code className="block bg-gray-100 p-3 rounded text-sm font-mono">
-                curl http://localhost:8080/assets/runtime-config.json
-              </code>
-            </div>
+          <div className="mt-4 p-3 bg-gray-50 rounded">
+            <p className="text-sm text-gray-600">
+              <strong>Base URL:</strong> <code>{config.apiUrl}</code>
+            </p>
           </div>
         </div>
 
         {/* Footer */}
         <div className="text-center mt-8 text-gray-500">
-          <p>Built with React + TypeScript + Vite + Docker + nginx</p>
+          <p>Built with React + TypeScript + Node.js + Express + Docker</p>
           <p className="text-sm mt-1">Build Time: {config.buildTime}</p>
         </div>
       </div>
