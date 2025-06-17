@@ -2,7 +2,7 @@ name: Build and Push Frontend
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, test ]
   pull_request:
     branches: [ main ]
 
@@ -16,6 +16,20 @@ jobs:
     permissions:
       contents: read
       packages: write
+
+    strategy:
+      matrix:
+        env: [dev, test, prod]
+        include:
+          - env: dev
+            branch: develop
+            api_url: http://api:3001/api
+          - env: test
+            branch: test
+            api_url: http://api:3001/api
+          - env: prod
+            branch: main
+            api_url: https://api.healthapp.com/api
 
     steps:
     - name: Checkout repository
@@ -50,21 +64,21 @@ jobs:
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix={{branch}}-
+          type=raw,value=${{ matrix.env }}
+          type=raw,value=${{ matrix.env }}-{{sha}}
           type=raw,value=latest,enable={{is_default_branch}}
 
     - name: Build and push Docker image
+      if: github.ref == format('refs/heads/{0}', matrix.branch) || github.event_name == 'pull_request'
       uses: docker/build-push-action@v5
       with:
         context: .
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          API_URL=${{ matrix.api_url }}
+          APP_NAME=Health Profile App - ${{ matrix.env }}
+          APP_ENV=${{ matrix.env }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
-
-    - name: Image digest
-      if: github.event_name != 'pull_request'
-      run: echo ${{ steps.build.outputs.digest }}

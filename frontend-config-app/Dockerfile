@@ -28,8 +28,8 @@ COPY default.conf /etc/nginx/conf.d/default.conf
 # Copy built application
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy runtime config template to the correct location
-COPY src/assets/runtime-config.json.template /usr/share/nginx/html/assets/runtime-config.json.template
+# Copy runtime config templates
+COPY config/ /usr/share/nginx/html/config/
 
 # Copy entrypoint script
 COPY entrypoint.sh /entrypoint.sh
@@ -39,6 +39,7 @@ RUN chmod +x /entrypoint.sh
 ENV API_URL=http://localhost:3001/api
 ENV APP_NAME="Health Profile Frontend"
 ENV NODE_ENV=production
+ENV APP_ENV=dev
 
 # Expose port
 EXPOSE 80

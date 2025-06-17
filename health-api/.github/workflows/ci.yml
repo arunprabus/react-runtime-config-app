@@ -2,7 +2,7 @@ name: Build and Push Health API
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, test ]
   pull_request:
     branches: [ main ]
 
@@ -13,6 +13,22 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env: [dev, test, prod]
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpassword
+          MYSQL_DATABASE: health_app_${{ matrix.env }}
+          MYSQL_USER: health_user
+          MYSQL_PASSWORD: health_password
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -27,6 +43,14 @@ jobs:
       run: npm ci
 
     - name: Run tests
+      env:
+        APP_ENV: ${{ matrix.env }}
+        DB_HOST: localhost
+        DB_PORT: 3306
+        DB_USER: health_user
+        DB_PASSWORD: health_password
+        DB_NAME: health_app_${{ matrix.env }}
+        JWT_SECRET: test-secret-key
       run: npm test
 
   build-and-push:
@@ -35,6 +59,17 @@ jobs:
     permissions:
       contents: read
       packages: write
+
+    strategy:
+      matrix:
+        env: [dev, test, prod]
+        include:
+          - env: dev
+            branch: develop
+          - env: test
+            branch: test
+          - env: prod
+            branch: main
 
     steps:
     - name: Checkout repository
@@ -54,21 +89,19 @@ jobs:
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix={{branch}}-
+          type=raw,value=${{ matrix.env }}
+          type=raw,value=${{ matrix.env }}-{{sha}}
           type=raw,value=latest,enable={{is_default_branch}}
 
     - name: Build and push Docker image
+      if: github.ref == format('refs/heads/{0}', matrix.branch) || github.event_name == 'pull_request'
       uses: docker/build-push-action@v5
       with:
         context: .
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          APP_ENV=${{ matrix.env }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
-
-    - name: Image digest
-      if: github.event_name != 'pull_request'
-      run: echo ${{ steps.build.outputs.digest }}

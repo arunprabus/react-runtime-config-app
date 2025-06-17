@@ -17,9 +17,20 @@ const PORT = process.env.PORT || 3001;
 // Security middleware
 app.use(helmet());
 
-// CORS configuration - allow frontend origin
+// CORS configuration - allow multiple development origins
+const allowedOrigins = [
+  'http://localhost:8080',    // Host access to Dockerized frontend
+  'http://localhost:5173',    // Local Vite development server
+  'http://frontend:80',       // Inter-container communication
+];
+
+// Add FRONTEND_URL if defined
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || ['http://localhost:8080', 'http://localhost:5173'],
+  origin: allowedOrigins,
   credentials: true
 }));
 
@@ -65,7 +76,7 @@ app.use('*', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Health API running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:8080'}`);
+  console.log(`🔗 Allowed CORS origins: ${allowedOrigins.join(', ')}`);
 });
 
 export default app;
